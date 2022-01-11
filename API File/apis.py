@@ -1,0 +1,163 @@
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
+import os
+from datetime import datetime
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
+
+# datetime object containing current date and time
+now = datetime.now()
+
+print("now =", now)
+
+# dd/mm/YY H:M:S
+dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+# init app
+from sqlalchemy.sql.functions import current_timestamp
+
+app = Flask(__name__)
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+# database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'db.sqlite')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# init db
+db = SQLAlchemy(app)
+# init ma
+ma = Marshmallow(app)
+
+
+# user model
+class User(db.Model):
+    __tablename__ = 'user'
+    mob = db.Column(db.String(15), primary_key=True)
+    eid = db.Column(db.String(15), unique=True)
+    name = db.Column(db.String(30))
+    email = db.Column(db.String(30))
+    rel = db.relationship("Log", backref="user")
+
+
+    def __init__(self, mob, eid, name, email):
+        self.mob = mob
+        self.eid = eid
+        self.name = name
+        self.email = email
+
+#Log Model
+class Log(db.Model):
+    __tablename__ = 'log'
+    logTime = db.Column(db.DateTime, primary_key=True, default=dt_string)
+    mob = db.Column(db.String(15), ForeignKey(User.mob))
+    mask = db.Column(db.Boolean)
+    temp = db.Column(db.Float)
+    access = db.Column(db.Boolean)
+
+    def __init__(self, logTime, mob, mask, temp, access):
+        self.logTime = logTime
+        self.mob = mob
+        self.mask = mask
+        self.temp = temp
+        self.access = access
+
+
+# user schema
+class UserSchema(ma.Schema):
+    class Meta:
+        fields = ('mob', 'eid', 'name', 'email')
+
+
+# init user schema
+user_schema = UserSchema()
+user_schema = UserSchema(many=True)
+
+
+# Log schema
+class LogSchema(ma.Schema):
+    class Meta:
+        fields = ('log_time', 'mob', 'mask', 'temp', 'access')
+
+
+# init user schema
+user_schema = LogSchema()
+user_schema = LogSchema(many=True)
+
+
+# validation
+@app.route('/validate', methods=['POST'])
+def valid():
+    data = request.get_json()
+
+    eid=data.get("eid")
+    phone=data.get("phone")
+
+
+
+    if eid:
+        #query for id
+
+        existing_user = User.query.filter_by(eid=eid).first()
+        if existing_user is None:
+            return jsonify(userExist=False)
+        else:
+            return jsonify(userExist=True)
+    else:
+
+        #query for mob
+
+        existing_user = User.query.filter_by(mob=phone).first()
+        if existing_user is None:
+            return jsonify(userExist=False)
+        else:
+            return jsonify(userExist=True)
+
+
+# registration
+@app.route('/register', methods=['POST'])
+def insert():
+    mob = request.json['mob']
+    eid = request.json['eid']
+    name = request.json['name']
+    email = request.json['email']
+    images=request.files.to_dict(flat=False)
+    ##files is a list containing two
+    if images is None:
+        for i, file in enumerate(images):
+            file.save(f'image-{i}.jpg')
+
+    new_user = User(mob, eid, name, email)
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify (registrationSuccess= True)
+
+
+# logging
+@app.route('/logging', methods=['POST'])
+def log():
+    logTime = request.json['logTime']
+    mob = request.json['mob']
+    mask = request.json['mask']
+    temp = request.json['temp']
+    access = request.json['access']
+
+    log_user = Log(logTime, mob, mask, temp, access)
+
+    db.session.add(log_user)
+    db.session.commit()
+
+    return jsonify(transactionSuccess=True)
+
+
+# face iding
+@app.route('/identify/<mob>', methods=["GET"])
+def getIdentity(mob):
+    user = User.query.get(mob)
+    return user_schema.jsonify(user)
+
+
+# run server
+if __name__ == '__main__':
+    app.run(debug=True)
