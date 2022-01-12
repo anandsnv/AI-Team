@@ -31,24 +31,24 @@ class User(db.Model):
     email = db.Column(db.String(30))
     rel = db.relationship("Log", backref="user")
 
-
     def __init__(self, mob, eid, name, email):
         self.mob = mob
         self.eid = eid
         self.name = name
         self.email = email
 
-#Log Model
+
+# Log Model
 class Log(db.Model):
     __tablename__ = 'log'
-    logTime = db.Column(db.DateTime, primary_key=True,default=datetime.utcnow)
+    log_time = db.Column(db.DateTime, primary_key=True, default=datetime.utcnow)
     mob = db.Column(db.String(15), ForeignKey(User.mob))
     mask = db.Column(db.Boolean)
     temp = db.Column(db.Float)
     access = db.Column(db.Boolean)
 
-    def __init__(self, logTime, mob, mask, temp, access):
-        self.logTime = logTime
+    def __init__(self, log_time, mob, mask, temp, access):
+        self.log_time = log_time
         self.mob = mob
         self.mask = mask
         self.temp = temp
@@ -73,8 +73,8 @@ class LogSchema(ma.Schema):
 
 
 # init user schema
-user_schema = LogSchema()
-user_schema = LogSchema(many=True)
+log_schema = LogSchema()
+log_schema = LogSchema(many=True)
 
 
 # validation
@@ -82,13 +82,11 @@ user_schema = LogSchema(many=True)
 def valid():
     data = request.get_json()
 
-    eid=data.get("eid")
-    phone=data.get("phone")
-
-
+    eid = data.get("eid")
+    phone = data.get("phone")
 
     if eid:
-        #query for id
+        # query for id
 
         existing_user = User.query.filter_by(eid=eid).first()
         if existing_user is None:
@@ -97,7 +95,7 @@ def valid():
             return jsonify(userExist=True)
     elif phone:
 
-        #query for mob
+        # query for mob
 
         existing_user = User.query.filter_by(mob=phone).first()
         if existing_user is None:
@@ -115,7 +113,7 @@ def insert():
     eid = request.json['eid']
     name = request.json['name']
     email = request.json['email']
-    images=request.files.to_dict(flat=False)
+    images = request.files.to_dict(flat=False)
     ##files is a list containing two
     if images is None:
         for i, file in enumerate(images):
@@ -126,17 +124,23 @@ def insert():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify (registrationSuccess= True)
+    return jsonify(registrationSuccess=True)
 
 
 # logging
 @app.route('/logging', methods=['POST'])
 def log():
-    logtime=db.Column(db.DateTime,default=datetime.utcnow)
     mob = request.json['mob']
     mask = request.json['mask']
     temp = request.json['temp']
     access = request.json['access']
+    date = request.json["date"]
+    log_time = datetime.strptime(date, '%d/%m/%Y %H:%M:%S')
+
+
+    new_log = Log(log_time, mob, mask, temp, access)
+
+    db.session.add(new_log)
 
     db.session.commit()
 
