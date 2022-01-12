@@ -6,13 +6,6 @@ from datetime import datetime
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
-# datetime object containing current date and time
-now = datetime.now()
-
-print("now =", now)
-
-# dd/mm/YY H:M:S
-dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 # init app
 from sqlalchemy.sql.functions import current_timestamp
 
@@ -48,7 +41,7 @@ class User(db.Model):
 #Log Model
 class Log(db.Model):
     __tablename__ = 'log'
-    logTime = db.Column(db.DateTime, primary_key=True, default=dt_string)
+    logTime = db.Column(db.DateTime, primary_key=True,default=datetime.utcnow)
     mob = db.Column(db.String(15), ForeignKey(User.mob))
     mask = db.Column(db.Boolean)
     temp = db.Column(db.Float)
@@ -102,7 +95,7 @@ def valid():
             return jsonify(userExist=False)
         else:
             return jsonify(userExist=True)
-    else:
+    elif phone:
 
         #query for mob
 
@@ -111,6 +104,8 @@ def valid():
             return jsonify(userExist=False)
         else:
             return jsonify(userExist=True)
+    else:
+        return f"Wrong Input"
 
 
 # registration
@@ -137,15 +132,12 @@ def insert():
 # logging
 @app.route('/logging', methods=['POST'])
 def log():
-    logTime = request.json['logTime']
+    logtime=db.Column(db.DateTime,default=datetime.utcnow)
     mob = request.json['mob']
     mask = request.json['mask']
     temp = request.json['temp']
     access = request.json['access']
 
-    log_user = Log(logTime, mob, mask, temp, access)
-
-    db.session.add(log_user)
     db.session.commit()
 
     return jsonify(transactionSuccess=True)
