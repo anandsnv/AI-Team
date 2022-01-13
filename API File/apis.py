@@ -72,7 +72,7 @@ class LogSchema(ma.Schema):
         fields = ('log_time', 'mob', 'mask', 'temp', 'access')
 
 
-# init user schema
+# init log schema
 log_schema = LogSchema()
 log_schema = LogSchema(many=True)
 
