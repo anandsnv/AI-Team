@@ -4,7 +4,16 @@ from flask_marshmallow import Marshmallow
 import os
 from datetime import datetime
 from sqlalchemy import ForeignKey
+from maskdetection.face import face_match
 from sqlalchemy.orm import relationship
+import maskdetection.yolov5
+
+#import maskdetection.yolov5.face
+import maskdetection
+import maskdetection.yolov5
+import  maskdetection.face
+
+
 
 # init app
 from sqlalchemy.sql.functions import current_timestamp
@@ -148,10 +157,14 @@ def log():
 
 
 # face iding
-@app.route('/identify/<mob>', methods=["GET"])
-def getIdentity(mob):
-    user = User.query.get(mob)
-    return user_schema.jsonify(user)
+@app.route('/face', methods=["POST"])
+def getIdentity():
+
+
+  face_match("maskdetection/3.jpg", "maskdetection/data.pt")
+  #mask = request.json["mask"]
+  return jsonify(mask = True)
+
 
 
 # run server
